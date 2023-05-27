@@ -65,8 +65,9 @@ mod tests {
         //         (&meta as *const Meta) as *const u8,
         //         ::core::mem::size_of::<Meta>(),
         //     )
-        // }); // 32
-        // dbg!(&serializer); // inner: 24
+        // }
+        // .len()); // 104
+        // dbg!(&serializer.into_serializer().into_inner().len()); // 56
         dbg!(&pos);
         let bytes = serializer.into_serializer().into_inner();
         let mut file = File::create(DST).expect("open cust file");
