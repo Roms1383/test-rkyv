@@ -88,5 +88,6 @@ mod tests {
         let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE_META], SIZE_POS + pos) };
         assert_eq!(archived.name, NAME);
         assert_eq!(archived.age, AGE);
+        dbg!(&archived.one, &archived.two, &archived.three);
     }
 }
