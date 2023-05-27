@@ -37,10 +37,7 @@ mod tests {
     const NAME: &str = "Jean-Guy";
     const AGE: u8 = 35;
 
-    #[cfg(target_pointer_width = "32")]
     const SIZE_POS: usize = 4;
-    #[cfg(target_pointer_width = "64")]
-    const SIZE_POS: usize = 8;
 
     #[allow(unused_variables)]
     fn setup() -> Vec<u8> {
@@ -71,6 +68,7 @@ mod tests {
         dbg!(&pos);
         let bytes = serializer.into_serializer().into_inner();
         let mut file = File::create(DST).expect("open cust file");
+        let pos = pos as u32;
         // pos varies depending on content, so let's store it
         file.write(&pos.to_le_bytes())
             .expect("write cust pos bytes");
@@ -88,7 +86,7 @@ mod tests {
         let file = File::open(DST).expect("open cust file");
         let mmap = unsafe { Mmap::map(&file).expect("map file in memory") };
         let pos: [u8; SIZE_POS] = mmap[..SIZE_POS].try_into().expect("read pos");
-        let pos = usize::from_le_bytes(pos);
+        let pos = u32::from_le_bytes(pos) as usize;
         dbg!(&pos);
         let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE_META], SIZE_POS + pos) };
         assert_eq!(archived.name, NAME);
