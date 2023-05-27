@@ -37,6 +37,11 @@ mod tests {
     const NAME: &str = "Jean-Guy";
     const AGE: u8 = 35;
 
+    #[cfg(target_pointer_width = "32")]
+    const SIZE_POS: usize = 4;
+    #[cfg(target_pointer_width = "64")]
+    const SIZE_POS: usize = 8;
+
     #[allow(unused_variables)]
     fn setup() {
         let mut file = File::open(SRC).expect("open zip file");
@@ -50,7 +55,7 @@ mod tests {
             three: Faker.fake(),
             age: AGE,
         };
-        let mut serializer = AllocSerializer::<0>::default();
+        let mut serializer = AllocSerializer::<1024>::default();
         let pos = serializer
             .serialize_value(&meta)
             .expect("failed to archive meta");
@@ -72,18 +77,15 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_pointer_width = "64")]
     fn mmap_partial() {
         setup();
 
-        const SIZE: usize = std::mem::size_of::<ArchivedMeta>();
+        const SIZE_META: usize = std::mem::size_of::<ArchivedMeta>();
         let file = File::open(DST).expect("open cust file");
         let mmap = unsafe { Mmap::map(&file).expect("map file in memory") };
-        let pos: [u8; 8] = mmap[..std::mem::size_of::<usize>()]
-            .try_into()
-            .expect("read pos");
+        let pos: [u8; SIZE_POS] = mmap[..SIZE_POS].try_into().expect("read pos");
         let pos = usize::from_le_bytes(pos);
-        let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE], 8 + pos) };
+        let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE_META], SIZE_POS + pos) };
         assert_eq!(archived.name, NAME);
         assert_eq!(archived.age, AGE);
     }
