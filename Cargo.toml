@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.24", features = ["serde", "rkyv"] }
 const_format = "0.2.30"
+fake = "2.6.1"
 memmap2 = "0.6.2"
 rkyv = { version = "0.7.42" }

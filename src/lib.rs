@@ -5,6 +5,9 @@
 #[archive_attr(derive(Debug))]
 pub struct Meta {
     pub name: String,
+    pub one: String,
+    pub two: String,
+    pub three: String,
     pub age: u8,
     // blocked on chrono PR (support for PartialEq/PartialOrd)
     // pub finalized: Option<DateTime<Utc>>,
@@ -18,6 +21,7 @@ mod tests {
     };
 
     use const_format::formatcp;
+    use fake::{Fake, Faker};
     use memmap2::Mmap;
     use rkyv::{
         archived_value,
@@ -30,6 +34,7 @@ mod tests {
     const SRC: &str = formatcp!("{}{}{}", DIR, '/', "archive.zip");
     const DST: &str = formatcp!("{}{}{}", DIR, '/', "archive.cust");
 
+    const NAME: &str = "Jean-Guy";
     const AGE: u8 = 35;
 
     #[allow(unused_variables)]
@@ -37,10 +42,12 @@ mod tests {
         let mut file = File::open(SRC).expect("open zip file");
         let mut blob = Vec::new();
         file.read_to_end(&mut blob).expect("read zip file to bytes");
-        assert_eq!(blob.len(), 106_740_021);
 
         let meta = Meta {
-            name: "some name".to_owned(),
+            name: NAME.to_owned(),
+            one: Faker.fake(),
+            two: Faker.fake(),
+            three: Faker.fake(),
             age: AGE,
         };
         let mut serializer = AllocSerializer::<0>::default();
@@ -54,24 +61,30 @@ mod tests {
         //     )
         // }); // 32
         // dbg!(&serializer); // inner: 24
-        dbg!(pos); // 12
+        dbg!(&pos);
         let bytes = serializer.into_serializer().into_inner();
         let mut file = File::create(DST).expect("open cust file");
+        // pos varies depending on content, so let's store it
+        file.write(&pos.to_le_bytes())
+            .expect("write cust pos bytes");
         file.write(bytes.as_slice()).expect("write cust meta bytes");
         file.write(blob.as_slice()).expect("write cust zip bytes");
-        assert_eq!(bytes.len() + blob.len(), 106_740_045);
     }
 
     #[test]
+    #[cfg(target_pointer_width = "64")]
     fn mmap_partial() {
         setup();
 
         const SIZE: usize = std::mem::size_of::<ArchivedMeta>();
-        assert_eq!(SIZE, 12);
         let file = File::open(DST).expect("open cust file");
         let mmap = unsafe { Mmap::map(&file).expect("map file in memory") };
-        let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE], 12) };
-        assert_eq!(archived.name, "some name");
+        let pos: [u8; 8] = mmap[..std::mem::size_of::<usize>()]
+            .try_into()
+            .expect("read pos");
+        let pos = usize::from_le_bytes(pos);
+        let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE], 8 + pos) };
+        assert_eq!(archived.name, NAME);
         assert_eq!(archived.age, AGE);
     }
 }
