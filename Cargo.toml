@@ -1,0 +1,12 @@
+[package]
+name = "test-rkyv"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0.4.24", features = ["serde", "rkyv"] }
+const_format = "0.2.30"
+memmap2 = "0.6.2"
+rkyv = { version = "0.7.42" }
