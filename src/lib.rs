@@ -43,10 +43,11 @@ mod tests {
     const SIZE_POS: usize = 8;
 
     #[allow(unused_variables)]
-    fn setup() {
+    fn setup() -> Vec<u8> {
         let mut file = File::open(SRC).expect("open zip file");
         let mut blob = Vec::new();
         file.read_to_end(&mut blob).expect("read zip file to bytes");
+        dbg!(&blob.len());
 
         let meta = Meta {
             name: NAME.to_owned(),
@@ -73,21 +74,28 @@ mod tests {
         file.write(&pos.to_le_bytes())
             .expect("write cust pos bytes");
         file.write(bytes.as_slice()).expect("write cust meta bytes");
-        file.write(blob.as_slice()).expect("write cust zip bytes");
+        let written = file.write(blob.as_slice()).expect("write cust zip bytes");
+        dbg!(written);
+        blob
     }
 
     #[test]
     fn mmap_partial() {
-        setup();
+        let blob = setup();
 
         const SIZE_META: usize = std::mem::size_of::<ArchivedMeta>();
         let file = File::open(DST).expect("open cust file");
         let mmap = unsafe { Mmap::map(&file).expect("map file in memory") };
         let pos: [u8; SIZE_POS] = mmap[..SIZE_POS].try_into().expect("read pos");
         let pos = usize::from_le_bytes(pos);
+        dbg!(&pos);
         let archived = unsafe { archived_value::<Meta>(&mmap[..SIZE_META], SIZE_POS + pos) };
         assert_eq!(archived.name, NAME);
         assert_eq!(archived.age, AGE);
         dbg!(&archived.one, &archived.two, &archived.three);
+        let zip = &mmap[SIZE_POS + pos + SIZE_META..];
+        dbg!(zip[..].len());
+        assert_eq!(zip.len(), blob.len());
+        assert_eq!(zip[..], blob[..]);
     }
 }
